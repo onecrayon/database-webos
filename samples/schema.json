@@ -1,0 +1,31 @@
+[
+	{
+		"table": "favorite_books",
+		"columns": [
+			{ 
+				"column": "rowID",
+				"type": "INTEGER",
+				"constraints": ["PRIMARY KEY"]
+			},
+			{
+				"column": "author",
+				"type": "TEXT"
+			},
+			{
+				"column": "title",
+				"type": "TEXT"
+			}
+		]
+	},
+	{
+		"table": "awesome_video_games",
+		"columns": [
+			{
+				"column": "rowID",
+				"type": "INTEGER",
+				"constraints": ["PRIMARY KEY"]
+			},
+			{ "column": "title", "type": "TEXT" }
+		]
+	}
+]

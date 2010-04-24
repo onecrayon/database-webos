@@ -1,0 +1,30 @@
+[
+	{
+		"table": "favorite_books",
+		"data": [
+			{
+				"rowID": 0,
+				"author": "F. Scott Fitzgerald",
+				"title": "The Great Gatsby"
+			},
+			{
+				"rowID": 1,
+				"author": "J.R.R. Tolkien",
+				"title": "The Lord of the Rings"
+			},
+			{
+				"rowID": 2,
+				"author": "Orson Scott Card",
+				"title": "Ender's Game"
+			}
+		]
+	},
+	{
+		"table": "awesome_video_games",
+		"data": [
+			{ "rowID": 0, "title": "Dark Forces" },
+			{ "rowID": 1, "title": "Earthworm Jim" },
+			{ "rowID": 2, "title": "Nethergate" }
+		]
+	}
+]
