@@ -1,0 +1,50 @@
+The Database class provides methods for working with HTML 5 SQLite
+databases in Palm's WebOS.  It relies on Prototype.js and the
+Mojo framework to function, although porting it for general-purpose
+use in browsers would be fairly trivial.
+
+**Please note:** some portions of this class are untested! I wrote
+the class for use in an app, and a few of the methods I haven't
+needed to use yet.  Use with caution, and if you find and/or fix a
+bug, please let me know!
+
+## Installation
+
+To use the class, download the database.js file and put it somewhere
+in your app (I usually use a top-level javascripts folder for this
+kind of generic script).
+
+Add the following line to your `sources.json` file:
+
+    {"source": "javascripts/database.js"}
+
+And then in any of your assistants or other Javascript files you
+should be able to instantiate the class like so:
+
+    var db = new Database('ext:my_database', {version: 1, estimatedSize: 1048576});
+
+I'll add documentation for using the class once I'm certain that
+the methods and whatnot aren't going to be changing. In the 
+meantime, there's extensive documentation in the class itself
+
+## Released under an MIT license
+
+Copyright (c) 2010 Ian Beck
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
