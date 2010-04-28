@@ -15,7 +15,7 @@ version: 1.0.0
 Core class design based on the Mootools Database class by André Fiedler:
 http://github.com/SunboX/mootools-database/
 
-Schema definitions based on Mojo Database Helper Objects, author unknown:
+Schema definitions based on Mojo Database Helper Objects by Dave Freeman:
 http://webos101.com/Mojo_Database_Helper_Objects
 
 ...
@@ -484,7 +484,6 @@ var Database = Class.create({
 	},
 	
 	/*
-	UNTESTED
 	SQL to update a particular row
 	
 	Parameters:
@@ -496,10 +495,6 @@ var Database = Class.create({
 	Returns DatabaseQuery object
 	*/
 	getUpdate: function(tableName, data, where) {
-		// Convert where to an array if necessary
-		if (!Object.isArray(where)) {
-			where = [where];
-		}
 		var sql = 'UPDATE ' + tableName + ' SET ';
 		var sqlValues = [];
 		var sqlStrings = [];
