@@ -35,6 +35,10 @@ Parameters:
 
 USAGE:
 var db = new Database('ext:my_database', {version: 1, estimatedSize: 1048576});
+
+TODO:
+- Further testing of methods
+- Look for additional optimizations (remove anonymous functions and bind where possible) 
 */
 
 var Database = Class.create({
@@ -72,6 +76,13 @@ var Database = Class.create({
 		this.dbVersion = this.db.version;
 		// Setup a dummy last insert row ID
 		this.lastInsertRowId = 0;
+		// Setup listing of bound methods
+		// Cuts down on memory usage spikes, since bind() creates a new method every call, but causes more initial memory to be allocated
+		this.bound = {
+			setSchema: this.setSchema.bind(this),
+			insertData: this.insertData.bind(this),
+			_errorHandler: this._errorHandler.bind(this)
+		};
 	},
 	
 	
@@ -201,9 +212,14 @@ var Database = Class.create({
 		// Run the transaction
 		this.db.transaction(function(transaction) {
 			// Loop over each query and execute it
-			queries.each(function(query) {
-				var sql = '';
-				var values = [];
+			// Avoiding each saves on memory usage
+			var length = queries.length;
+			var query = null;
+			// Init variables for tracking SQL and values
+			var sql = '';
+			var values = [];
+			for (var i = 0; i < length; i++) {
+				query = queries[i];
 				// If query isn't a string, it's an object
 				if (Object.isString(query)) {
 					sql = query;
@@ -214,7 +230,7 @@ var Database = Class.create({
 				// TEMP: logging is good for the soul right now
 				Mojo.Log.info(sql, " ==> ", values);
 				transaction.executeSql(sql, values);
-			});
+			}
 		}, options.onError, options.onSuccess);
 	},
 	
@@ -298,7 +314,10 @@ var Database = Class.create({
 		// Setup array to track data (just in case)
 		var data = [];
 		// Loop over the tables
-		schema.each(function(table) {
+		var length = schema.length;
+		var table = null;
+		for (var i = 0; i < length; i++) {
+			table = schema[i];
 			// Check for and save columns object
 			if (!Object.isUndefined(table.columns)) {
 				tableQueries.push(this.getCreateTable(table.table, table.columns));
@@ -307,7 +326,7 @@ var Database = Class.create({
 			if (!Object.isUndefined(table.data)) {
 				data.push({"table": table.table, "data": table.data});
 			}
-		}.bind(this));
+		}
 		if (data.length > 0) {
 			// Setup a synchronizer to allow the data insertion to proceed after table creation
 			var synchronizer = Mojo.Function.Synchronize({
@@ -332,7 +351,7 @@ var Database = Class.create({
 		- options (object): same as setSchema options (above)
 	*/
 	setSchemaFromURL: function(url, options) {
-		this._readURL(url, this.setSchema.bind(this), options);
+		this._readURL(url, this.bound.setSchema, options);
 	},
 	
 	/*
@@ -359,7 +378,13 @@ var Database = Class.create({
 		options = this._getOptions(options);
 		// Setup array to track queries
 		var dataQueries = [];
-		data.each(function(table) {
+		var length = data.length;
+		var table = null;
+		var i, j;
+		var insertsLength = 0;
+		var row = null;
+		for (i = 0; i < length; i++) {
+			table = data[i];
 			// Make sure there's actually a data array
 			if (!Object.isUndefined(table.data)) {
 				var tableName = table.table;
@@ -370,11 +395,14 @@ var Database = Class.create({
 				} else {
 					inserts = table.data;
 				}
-				inserts.each(function(row) {
+				// Nested loop to fetch the data inserts
+				insertsLength = inserts.length;
+				for (j = 0; j < insertsLength; j++) {
+					row = inserts[j];
 					dataQueries.push(this.getInsert(tableName, row));
-				}.bind(this));
+				}
 			}
-		}.bind(this));
+		}
 		// Execute that sucker!
 		this.queries(dataQueries, options);
 	},
@@ -387,7 +415,7 @@ var Database = Class.create({
 		- options (object): same as insertData options (above)
 	*/
 	insertDataFromURL: function(url, options) {
-		this._readURL(url, this.insertData.bind(this), options);
+		this._readURL(url, this.bound.insertData, options);
 	},
 	
 	
@@ -455,16 +483,16 @@ var Database = Class.create({
 		if (columns == null || columns == '') {
 			colStr = '*';
 		} else if (Object.isArray(columns)) {
-			columns.each(function(col, index) {
-				colStr += col;
-				// Add comma if we aren't at the end
-				if (index < columns.length - 1) {
-					colStr += ',';
-				}
-				colStr += ' ';
-			});
+			// Cut down on memory needs with a straight for loop
+			var length = columns.length;
+			var colStr = new Array();
+			for (var i = 0; i < length; i++) {
+				colStr.push(columns[i]);
+			}
+			// Join the column string together with commas
+			colStr = colStr.join(', ');
 		}
-		sql += colStr + 'FROM ' + tableName;
+		sql += colStr + ' FROM ' + tableName;
 		// Parse the WHERE object if we have one
 		if (!Object.isUndefined(where)) {
 			sql += ' WHERE ';
@@ -521,7 +549,6 @@ var Database = Class.create({
 	},
 	
 	/*
-	UNTESTED
 	SQL to delete records
 	
 	Parameters:
@@ -565,23 +592,21 @@ var Database = Class.create({
 		}
 		sql += tableName + ' (';
 		// Add the column definitions to the SQL
-		columns.each(function(col, index) {
+		var length = columns.length;
+		var col = null;
+		var colStr = new Array();
+		var colDef = '';
+		for (var i = 0; i < length; i++) {
+			col = columns[i];
 			// Construct the string for the column definition
-			var colDef = col.column + ' ' + col.type;
+			colDef = col.column + ' ' + col.type;
 			if (col.constraints) {
-				col.constraints.each(function(constraint) {
-					colDef += ' ' + constraint;
-				});
+				colDef += ' ' + col.constraints.join(' ');
 			}
 			// Add to SQL
-			sql += colDef;
-			// Add comma if we aren't at the end of the array
-			if (index < columns.length - 1) {
-				sql += ', ';
-			} else {
-				sql += ')';
-			}
-		});
+			colStr.push(colDef);
+		}
+		sql += colStr.join(', ') + ')';
 		return sql;
 	},
 	
@@ -606,7 +631,7 @@ var Database = Class.create({
 	_getOptions: function(userOptions, extraOptions) {
 		var opts = new Hash({
 			"onSuccess": Prototype.emptyFunction,
-			"onError": this._errorHandler.bind(this)
+			"onError": this.bound._errorHandler
 		});
 		if (!Object.isUndefined(extraOptions)) {
 			opts.merge(extraOptions);
