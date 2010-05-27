@@ -43,7 +43,7 @@ TODO:
 
 var Database = Class.create({
 	// === Class constructor ===
-	initialize: function(name, options) {
+	initialize: function(name, options, debug) {
 		// Name is required, enforce that
 		if (Object.isUndefined(name) || name == '') {
 			Mojo.Log.error('Database: you must define a name for your database when instantiating the class.');
@@ -64,6 +64,12 @@ var Database = Class.create({
 		});
 		// Merge our passed options into the default options
 		this.options = this.options.merge(options).toObject();
+		// Set the debug flag
+		if (Object.isUndefined(debug)) {
+			this.debug = false;
+		} else {
+			this.debug = debug;
+		}
 		// Open our database connection
 		// parameters: name, version, displayName [unused in WebOS], target size
 		this.db = openDatabase(this.dbName, this.options.version, '', this.options.estimatedSize);
@@ -123,7 +129,7 @@ var Database = Class.create({
 	If only there were a way to actually do this...
 	*/
 	destroy: function(version) {
-		Mojo.Log.info('Database: there is currently no way to destroy a database. Hopefully we will be able to add this in the future.');
+		Mojo.Log.error('Database: there is currently no way to destroy a database. Hopefully we will be able to add this in the future.');
 	},
 	
 	/*
@@ -167,8 +173,10 @@ var Database = Class.create({
 		}
 		// Run the transaction
 		this.db.transaction(function(transaction) {
-			// TEMP: Spams the log, but really handy for debugging right now
-			Mojo.Log.info(sql, ' ==> ', options.values);
+			if (this.debug) {
+				// Output the query to the log for debugging
+				Mojo.Log.info(sql, ' ==> ', options.values);
+			}
 			transaction.executeSql(sql, options.values, function(transaction, results) {
 				// We use this anonymous function to format the results
 				// Just passing the SQLResultSet object would require SQLite-specific code on the part of the callback
@@ -227,8 +235,10 @@ var Database = Class.create({
 					sql = query.sql;
 					values = query.values;
 				}
-				// TEMP: logging is good for the soul right now
-				Mojo.Log.info(sql, " ==> ", values);
+				if (this.debug) {
+					// Ouput query to the log for debugging
+					Mojo.Log.info(sql, " ==> ", values);
+				}
 				transaction.executeSql(sql, values);
 			}
 		}, options.onError, options.onSuccess);
