@@ -41,6 +41,8 @@ TODO:
 - Look for additional optimizations (remove anonymous functions and bind where possible) 
 */
 
+var DATABASE_DEBUG = false;
+
 var Database = Class.create({
 	// === Class constructor ===
 	initialize: function(name, options, debug) {
@@ -66,9 +68,9 @@ var Database = Class.create({
 		this.options = this.options.merge(options).toObject();
 		// Set the debug flag
 		if (Object.isUndefined(debug)) {
-			this.debug = false;
+			DATABASE_DEBUG = false;
 		} else {
-			this.debug = debug;
+			DATABASE_DEBUG = debug;
 		}
 		// Open our database connection
 		// parameters: name, version, displayName [unused in WebOS], target size
@@ -173,7 +175,7 @@ var Database = Class.create({
 		}
 		// Run the transaction
 		this.db.transaction(function(transaction) {
-			if (this.debug) {
+			if (DATABASE_DEBUG) {
 				// Output the query to the log for debugging
 				Mojo.Log.info(sql, ' ==> ', options.values);
 			}
@@ -205,7 +207,7 @@ var Database = Class.create({
 	- queries (array, required):
 		* SQL strings or DatabaseQuery objects
 	- options (object):
-		* onSuccess: function to execute on TRANSACTION success
+		* onSuccess: function to execute on LAST QUERY success
 		* onError: function to execute on TRANSACTION error
 	*/
 	queries: function(queries, options) {
@@ -235,13 +237,18 @@ var Database = Class.create({
 					sql = query.sql;
 					values = query.values;
 				}
-				if (this.debug) {
+				if (DATABASE_DEBUG) {
 					// Ouput query to the log for debugging
 					Mojo.Log.info(sql, " ==> ", values);
 				}
-				transaction.executeSql(sql, values);
+				if (i == length - 1) {
+					// Last call
+					transaction.executeSql(sql, values, options.onSuccess);
+				} else {
+					transaction.executeSql(sql, values);
+				}
 			}
-		}, options.onError, options.onSuccess);
+		}, options.onError);
 	},
 	
 	
@@ -472,7 +479,6 @@ var Database = Class.create({
 	},
 	
 	/*
-	UNTESTED
 	SQL for a very simple select
 	
 	Parameters:
@@ -483,10 +489,6 @@ var Database = Class.create({
 	Returns DatabaseQuery object
 	*/
 	getSelect: function(tableName, columns, where) {
-		// Convert where to an array if necessary
-		if (!Object.isArray(where) && !Object.isUndefined(where)) {
-			where = [where];
-		}
 		var sql = 'SELECT ';
 		// Setup our targeted columns
 		var colStr = '';
