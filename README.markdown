@@ -3,9 +3,8 @@ databases in Palm's WebOS.  It relies on Prototype.js and the
 Mojo framework to function, although porting it for general-purpose
 use in browsers would be fairly trivial.
 
-**Please note:** some portions of this class are untested! I wrote
-the class for use in an app, and a few of the methods I haven't
-needed to use yet.  Use with caution, and if you find and/or fix a
+**Please note:** all portions are now tested except the changeVersion
+capability. Still, use with caution, and if you find and/or fix a
 bug, please let me know!
 
 ## Installation
@@ -26,6 +25,14 @@ should be able to instantiate the class like so:
 I'll add documentation for using the class once I'm certain that
 the methods and whatnot aren't going to be changing. In the 
 meantime, there's extensive documentation in the class itself
+
+## In the wild
+
+The Database class was developed for and is used by [TouchNote][1].
+
+If I hear about it being used elsewhere, I'll note it here.
+
+   [1]: http://onecrayon.com/touchnote/
 
 ## Released under an MIT license
 
