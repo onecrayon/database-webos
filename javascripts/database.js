@@ -541,8 +541,10 @@ var Database = Class.create({
 		// Make sure we can use Hash enumerator
 		data = new Hash(data);
 		data.each(function(item) {
-			sqlStrings.push(item.key + ' = ?');
-			sqlValues.push(item.value);
+			if (!Object.isUndefined(item.value)) {
+				sqlStrings.push(item.key + ' = ?');
+				sqlValues.push(item.value);
+			}
 		});
 		// Collapse sqlStrings into SQL
 		sql += sqlStrings.join(', ');
