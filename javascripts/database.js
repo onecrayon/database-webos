@@ -346,7 +346,7 @@ var Database = Class.create({
 		}
 		if (data.length > 0) {
 			// Setup a synchronizer to allow the data insertion to proceed after table creation
-			var synchronizer = Mojo.Function.Synchronize({
+			var synchronizer = new Mojo.Function.Synchronize({
 				syncCallback: this.insertData.bind(this, data, options)
 			});
 			var wrapTrigger = synchronizer.wrap(function() {});
