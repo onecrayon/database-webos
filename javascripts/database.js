@@ -10,7 +10,7 @@ license: MIT license <http://www.opensource.org/licenses/mit-license.php>
 authors:
 - Ian Beck
 
-version: 1.0.0
+version: 1.1.0
 
 Core class design based on the Mootools Database class by André Fiedler:
 http://github.com/SunboX/mootools-database/
@@ -21,25 +21,21 @@ http://webos101.com/Mojo_Database_Helper_Objects
 ...
 */
 
-/*
-Database (class)
-
-This is the class you'll be using in your own code. Provides shortcuts
-to common HTML 5 SQLite database operations.
-
-Parameters:
-- name (string, required): prefix with ext: to allow >1 MB sizes
-- options (object):
-	* version (string): version of the database you want to open/create
-	* estimatedSize (int): estimated size in bytes
-
-USAGE:
-var db = new Database('ext:my_database', {version: 1, estimatedSize: 1048576});
-
-TODO:
-- Further testing of methods
-- Look for additional optimizations (remove anonymous functions and bind where possible) 
-*/
+/**
+ * Database (class)
+ *
+ * This is the class you'll be using in your own code. Provides shortcuts
+ * to common HTML 5 SQLite database operations.
+ *
+ * Parameters:
+ * - name (string, required): prefix with ext: to allow >1 MB sizes
+ * - options (object):
+ *     * version (string): version of the database you want to open/create
+ *     * estimatedSize (int): estimated size in bytes
+ *
+ * USAGE:
+ * var db = new Database('ext:my_database', {version: '1', estimatedSize: 1048576});
+ */
 
 var DATABASE_DEBUG = false;
 
@@ -96,58 +92,65 @@ var Database = Class.create({
 	
 	// === Standard database methods ===
 	
-	/* Fetch the version of the database */
+	/**
+	 * Fetch the version of the database
+	 */
 	getVersion: function() {
 		return this.dbVersion;
 	},
 	
-	/*
-	UNTESTED
-	
-	Change the version of the database; allows porting data when upgrading schema
-	*/
+	/**
+	 * Change the version of the database; allows porting data when
+	 * upgrading schema
+	 *
+	 * WARNING: you must have NO other database connections active when you
+	 * do this, and remember that afterward you will need to use the new
+	 * version in your `new Database()` calls.
+	 */
 	changeVersion: function(from, to) {
 		this.db.changeVersion(from, to);
 		this.dbVersion = to;
 	},
 	
-	/* Exposes the last ID inserted */
+	/**
+	 * Exposes the last ID inserted
+	 */
 	lastInsertID: function() {
 		return this.lastInsertRowId;
 	},
 	
-	/*
-	Close the database connection
-	
-	Why you'd want to do this, I don't know; may as well support it, though
-	*/
+	/**
+	 * Close the database connection
+	 *
+	 * Why you'd want to do this, I don't know; may as well support it, though
+	 */
 	close: function() {
 		this.db.close();
 	},
 	
-	/*
-	Destroy the entire database for the given version (if passed)
-	
-	If only there were a way to actually do this...
-	*/
+	/**
+	 * Destroy the entire database for the given version (if passed)
+	 *
+	 * If only there were a way to actually do this...
+	 */
 	destroy: function(version) {
 		Mojo.Log.error('Database: there is currently no way to destroy a database. Hopefully we will be able to add this in the future.');
 	},
 	
-	/*
-	Execute an arbitrary SQL command on the database.
-	
-	If you need to execute multiple commands in a transaction, use queries()
-	
-	Parameters:
-	- sql (string or query object, required)
-	- options (object):
-		* values (array): replacements for '?' placeholders in SQL
-		  (only use if not passing a DatabaseQuery object)
-		* onSuccess (function): method to call on successful query
-			+ receives single argument: results as an array of objects
-		* onError (function): method to call on error; defaults to logging
-	*/
+	/**
+	 * Execute an arbitrary SQL command on the database.
+	 *
+	 * If you need to execute multiple commands in a transaction, use queries()
+	 *
+	 * Parameters:
+	 * - sql (string or query object, required)
+	 * - options (object):
+	 *    * values (array): replacements for '?' placeholders in SQL
+	 *      (only use if not passing a DatabaseQuery object)
+	 *    * onSuccess (function): method to call on successful query
+	 *        + receives single argument: results as an array of objects
+	 *    * onError (function): method to call on error; defaults to logging
+	 */
 	query: function(sql, options) {
 		// Possible that the user closed the connection already, so double check
 		if (!this.db) {
@@ -195,21 +198,22 @@ var Database = Class.create({
 		}.bind(this));
 	},
 	
-	/*
-	Execute multiple arbitrary SQL queries on the database as a single transaction (group of inserts, for instance)
-	
-	Notes:
-	- Not appropriate for SELECT or anything with returned rows
-	- The last inserted ID will NOT be set when using this method
-	- onSuccess and onError are only for the transaction! NOT individual queries
-	
-	Parameters:
-	- queries (array, required):
-		* SQL strings or DatabaseQuery objects
-	- options (object):
-		* onSuccess: function to execute on LAST QUERY success
-		* onError: function to execute on TRANSACTION error
-	*/
+	/**
+	 * Execute multiple arbitrary SQL queries on the database as a single
+	 * transaction (group of inserts, for instance)
+	 *
+	 * Notes:
+	 * - Not appropriate for SELECT or anything with returned rows
+	 * - The last inserted ID will NOT be set when using this method
+	 * - onSuccess and onError are only for the transaction! NOT individual queries
+	 *
+	 * Parameters:
+	 * - queries (array, required):
+	 *    * SQL strings or DatabaseQuery objects
+	 * - options (object):
+	 *    * onSuccess: function to execute on LAST QUERY success
+	 *    * onError: function to execute on TRANSACTION error
+	 */
 	queries: function(queries, options) {
 		// Possible that the user closed the connection already, so double check
 		if (!this.db) {
@@ -254,69 +258,75 @@ var Database = Class.create({
 	
 	// === JSON methods ===
 	
-	/*
-	A core goal of the Database class is to enable you to easily port data
-	into your database using JSON.
-	
-	setSchema defines/inserts a table layout (if it doesn't already exist)
-	and inserts any data that you've provided inline
-	
-	Parameters:
-	- schema (object): see advanced description below
-	- options (object):
-		* onSuccess (function): called after successful transactions
-		* onError (function): called on error for transactions
-	
-	PLEASE NOTE: the onSuccess and onError functions may be called multiple
-	times if you are inserting data as well as defining a table schema.
-	
-	Schema Description
-	==================
-	
-	An array of table objects, which each contain an array of columns objects
-	and an optional array of data to insert
-	
-	Array of table objects (optional if single table) =>
-		table Object =>
-			table (text, required; name of the table)
-			columns (array) =>
-				column (text, required; name of the column)
-				type (text, required)
-				constraints (array of strings)
-			data (array) =>
-				Object (keys are the names of the columns)
-	
-	Both columns and data are optionally; you can use setSchema to
-	define the table schema, populate with data, or both.
-	
-	Obviously, it's better practice to populate with data only when you
-	need to, whereas you'll likely be defining tables every time you
-	instantiate the Database class.
-	
-	JSON example
-	============
-	
-	[
-		{
-			table: "table1",
-			columns: [
-				{
-					column: "entry_id",
-					type: "INTEGER",
-					constraints: ["PRIMARY_KEY"]
-				},
-				{
-					column: "title",
-					type: "TEXT"
-				}
-			],
-			data: [
-				{ entry_id: "1", title: "My first entry" },
-				{ entry_id: "2", title: "My second entry" }
-			]
-		}
-	]
-	*/
+	/**
+	 * A core goal of the Database class is to enable you to easily port data
+	 * into your database using JSON.
+	 *
+	 * setSchema defines/inserts a table layout (if it doesn't already exist)
+	 * and inserts any data that you've provided inline
+	 *
+	 * Parameters:
+	 * - schema (object): see advanced description below
+	 * - options (object):
+	 *    * onSuccess (function): called after successful transactions
+	 *    * onError (function): called on error for transactions
+	 *
+	 * PLEASE NOTE: the onSuccess and onError functions may be called multiple
+	 * times if you are inserting data as well as defining a table schema.
+	 * 
+	 * Schema Description
+	 * ==================
+	 *
+	 * An array of table objects, which each contain an array of columns objects
+	 * and an optional array of data to insert
+	 * 
+	 * Array of table objects (optional if single table) =>
+	 *     table Object =>
+	 *         table (text, required; name of the table)
+	 *         columns (array) =>
+	 *             column (text, required; name of the column)
+	 *             type (text, required)
+	 *             constraints (array of strings)
+	 *         data (array) =>
+	 *             Object (keys are the names of the columns)
+	 *     string (executed as a straight SQL query)
+	 *
+	 * Both columns and data are optionally; you can use setSchema to
+	 * define the table schema, populate with data, or both.
+	 *
+	 * Obviously, it's better practice to populate with data only when you
+	 * need to, whereas you'll likely be defining tables every time you
+	 * instantiate the Database class.
+	 *
+	 * You may also use an SQL string instead of a table object if you desire.
+	 * This is useful for running batch updates to modify existing schema, for
+	 * instance, as you can mix and match new tables with ALTER TABLE statements.
+	 *
+	 * JSON example
+	 * ============
+	 *
+	 * [
+	 *     {
+	 *         "table": "table1",
+	 *         "columns": [
+	 *             {
+	 *                 "column": "entry_id",
+	 *                 "type": "INTEGER",
+	 *                 "constraints": ["PRIMARY_KEY"]
+	 *             },
+	 *             {
+	 *                 "column": "title",
+	 *                 "type": "TEXT"
+	 *             }
+	 *         ],
+	 *         "data": [
+	 *             { "entry_id": "1", "title": "My first entry" },
+	 *             { "entry_id": "2", "title": "My second entry" }
+	 *         ]
+	 *     },
+	 *     "ALTER TABLE table1 ADD COLUMN category TEXT"
+	 * ]
+	 */
 	
 	setSchema: function(schema, options) {
 		// Check to see if it's a single table, make array for convenience
@@ -335,13 +345,18 @@ var Database = Class.create({
 		var table = null;
 		for (var i = 0; i < length; i++) {
 			table = schema[i];
-			// Check for and save columns object
-			if (!Object.isUndefined(table.columns)) {
-				tableQueries.push(this.getCreateTable(table.table, table.columns));
-			}
-			// Check for and save data array
-			if (!Object.isUndefined(table.data)) {
-				data.push({"table": table.table, "data": table.data});
+			// Check to see if we have an SQL string
+			if (Object.isString(table)) {
+				tableQueries.push(table);
+			} else {
+				// Check for and save columns object
+				if (!Object.isUndefined(table.columns)) {
+					tableQueries.push(this.getCreateTable(table.table, table.columns));
+				}
+				// Check for and save data array
+				if (!Object.isUndefined(table.data)) {
+					data.push({"table": table.table, "data": table.data});
+				}
 			}
 		}
 		if (data.length > 0) {
@@ -360,31 +375,32 @@ var Database = Class.create({
 		}
 	},
 	
-	/*
-	Allows you to set your schema using an arbitrary JSON file.
-	
-	Parameters:
-		- url (string, required): local or remote URL for JSON file
-		- options (object): same as setSchema options (above)
-	*/
+	/**
+	 * Allows you to set your schema using an arbitrary JSON file.
+	 *
+	 * Parameters:
+	 *     - url (string, required): local or remote URL for JSON file
+	 *     - options (object): same as setSchema options (above)
+	 */
 	setSchemaFromURL: function(url, options) {
 		this._readURL(url, this.bound.setSchema, options);
 	},
 	
-	/*
-	Inserts arbitrary data from a Javascript object
-	
-	Parameters:
-	- data (array or object):
-		* table (string, required): name of the table to insert into
-		* data (array, required): array of objects whose keys are the column names to insert into
-	- options (object):
-		* onSuccess (function): success callback
-		* onError (function): error callback
-	
-	The formatting is the same as for the schema, just without the columns.
-	Note that data can be a single object if only inserting into one table.
-	*/
+	/**
+	 * Inserts arbitrary data from a Javascript object
+	 *
+	 * Parameters:
+	 * - data (array or object):
+	 *     * table (string, required): name of the table to insert into
+	 *     * data (array, required): array of objects whose keys are the column
+	 *       names to insert into
+	 * - options (object):
+	 *     * onSuccess (function): success callback
+	 *     * onError (function): error callback
+	 *
+	 * The formatting is the same as for the schema, just without the columns.
+	 * Note that data can be a single object if only inserting into one table.
+	 */
 	insertData: function(data, options) {
 		// Check to see if it's a single table
 		if (!Object.isArray(data)) {
@@ -424,13 +440,13 @@ var Database = Class.create({
 		this.queries(dataQueries, options);
 	},
 	
-	/*
-	Allows you to populate data using arbitrary JSON file.
-	
-	Parameters:
-		- url (string, required): local or remote URL for JSON file
-		- options (object): same as insertData options (above)
-	*/
+	/**
+	 * Allows you to populate data using arbitrary JSON file.
+	 *
+	 * Parameters:
+	 * - url (string, required): local or remote URL for JSON file
+	 * - options (object): same as insertData options (above)
+	 */
 	insertDataFromURL: function(url, options) {
 		this._readURL(url, this.bound.insertData, options);
 	},
@@ -438,16 +454,17 @@ var Database = Class.create({
 	
 	// === SQL Methods ===
 	
-	/*
-	SQL to Insert records (create)
-	
-	Parameters:
-	- tableName (string, required)
-	- data (object, required):
-		* key: value pairs to be updated as column: value (same format as data objects in schema)
-	
-	Returns DatabaseQuery object
-	*/
+	/**
+	 * SQL to Insert records (create)
+	 *
+	 * Parameters:
+	 * - tableName (string, required)
+	 * - data (object, required):
+	 *     * key: value pairs to be updated as column: value (same format as data
+	 *       objects in schema)
+	 *
+	 * Returns DatabaseQuery object
+	 */
 	getInsert: function(tableName, data) {
 		var sql = 'INSERT INTO ' + tableName + ' (';
 		var valueString = ' VALUES (';
@@ -478,16 +495,16 @@ var Database = Class.create({
 		return new DatabaseQuery(sql, colValues);
 	},
 	
-	/*
-	SQL for a very simple select
-	
-	Parameters:
-	- tableName (string, required)
-	- columns (string, array, or null): names of the columns to return
-	- where (object): {key: value} is equated to column: value
-	
-	Returns DatabaseQuery object
-	*/
+	/**
+	 * SQL for a very simple select
+	 *
+	 * Parameters:
+	 * - tableName (string, required)
+	 * - columns (string, array, or null): names of the columns to return
+	 * - where (object): {key: value} is equated to column: value
+	 *
+	 * Returns DatabaseQuery object
+	 */
 	getSelect: function(tableName, columns, where) {
 		var sql = 'SELECT ';
 		// Setup our targeted columns
@@ -523,17 +540,18 @@ var Database = Class.create({
 		return new DatabaseQuery(sql, sqlValues);
 	},
 	
-	/*
-	SQL to update a particular row
-	
-	Parameters:
-	- tableName (string, required)
-	- data (object, required):
-		* key: value pairs to be updated as column: value (same format as data objects in schema)
-	- where (object): key: value translated to 'column = value'
-	
-	Returns DatabaseQuery object
-	*/
+	/**
+	 * SQL to update a particular row
+	 *
+	 * Parameters:
+	 * - tableName (string, required)
+	 * - data (object, required):
+	 *     * key: value pairs to be updated as column: value (same format as
+	 *       data objects in schema)
+	 * - where (object): key: value translated to 'column = value'
+	 *
+	 * Returns DatabaseQuery object
+	 */
 	getUpdate: function(tableName, data, where) {
 		var sql = 'UPDATE ' + tableName + ' SET ';
 		var sqlValues = [];
@@ -562,15 +580,15 @@ var Database = Class.create({
 		return new DatabaseQuery(sql, sqlValues);
 	},
 	
-	/*
-	SQL to delete records
-	
-	Parameters:
-	- tableName (string, required)
-	- where (object, required): key: value mapped to 'column = value'
-	
-	Returns DatabaseQuery object
-	*/
+	/**
+	 * SQL to delete records
+	 *
+	 * Parameters:
+	 * - tableName (string, required)
+	 * - where (object, required): key: value mapped to 'column = value'
+	 *
+	 * Returns DatabaseQuery object
+	 */
 	getDelete: function(tableName, where) {
 		var sql = 'DELETE FROM ' + tableName + ' WHERE ';
 		var sqlValues = [];
@@ -586,16 +604,17 @@ var Database = Class.create({
 		return new DatabaseQuery(sql, sqlValues);
 	},
 	
-	/*
-	SQL to create a new table
-	
-	Parameters:
-	- tableName (string, required)
-	- columns (array, required): uses syntax from setSchema (see above)
-	- ifNotExists (bool, defaults to true)
-	
-	Returns string, since value substitution isn't supported for this statement in SQLite
-	*/
+	/**
+	 * SQL to create a new table
+	 *
+	 * Parameters:
+	 * - tableName (string, required)
+	 * - columns (array, required): uses syntax from setSchema (see above)
+	 * - ifNotExists (bool, defaults to true)
+	 *
+	 * Returns string, since value substitution isn't supported for this
+	 * statement in SQLite
+	 */
 	
 	getCreateTable: function(tableName, columns, ifNotExists) {
 		var ifNotExists = (!Object.isUndefined(ifNotExists) ? ifNotExists : true);
@@ -624,24 +643,25 @@ var Database = Class.create({
 		return sql;
 	},
 	
-	/*
-	SQL for dropping a table
-	
-	Returns string
-	*/
+	/**
+	 * SQL for dropping a table
+	 *
+	 * Returns string
+	 */
 	getDropTable: function(tableName) {
 		return 'DROP TABLE IF EXISTS ' + tableName;
 	},
 	
 	// === Private methods ===
 	
-	/*
-	Merge user options into the standard set
-	
-	Parameters:
-	- userOptions (object, required): options passed by the user
-	- extraOptions (object, optional) any default options beyond onSuccess and onError
-	*/
+	/**
+	 * Merge user options into the standard set
+	 * 
+	 * Parameters:
+	 * - userOptions (object, required): options passed by the user
+	 * - extraOptions (object, optional) any default options beyond onSuccess
+	 *   and onError
+	 */
 	_getOptions: function(userOptions, extraOptions) {
 		var opts = new Hash({
 			"onSuccess": Prototype.emptyFunction,
@@ -700,18 +720,19 @@ var Database = Class.create({
 	}
 });
 
-/*
-DatabaseQuery (class)
-
-This is a helper class that, at the moment, is basically just an object with standard properties.
-
-Maybe down the road I'll add some helper methods for working with queries.
-
-USAGE:
-var myQuery = new DatabaseQuery('SELECT * FROM somwehere WHERE id = ?', ['someID']);
-console.log(myQuery.sql);
-consol.log(myQuery.values);
-*/
+/**
+ * DatabaseQuery (class)
+ *
+ * This is a helper class that, at the moment, is basically just an object
+ * with standard properties.
+ *
+ * Maybe down the road I'll add some helper methods for working with queries.
+ *
+ * USAGE:
+ * var myQuery = new DatabaseQuery('SELECT * FROM somwehere WHERE id = ?', ['someID']);
+ * console.log(myQuery.sql);
+ * consol.log(myQuery.values);
+ */
 
 var DatabaseQuery = Class.create({
 	initialize: function(sql, values) {

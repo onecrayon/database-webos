@@ -3,9 +3,10 @@ databases in Palm's WebOS.  It relies on Prototype.js and the
 Mojo framework to function, although porting it for general-purpose
 use in browsers would be fairly trivial.
 
-**Please note:** all portions are now tested except the changeVersion
-capability. Still, use with caution, and if you find and/or fix a
-bug, please let me know!
+All portions are now tested. Still, use with caution, and if you
+find and/or fix a bug, please let me know! There may still be
+problems with edge case scenarios or portions of the script that I use
+infrequently.
 
 ## Installation
 
@@ -20,19 +21,19 @@ Add the following line to your `sources.json` file:
 And then in any of your assistants or other Javascript files you
 should be able to instantiate the class like so:
 
-    var db = new Database('ext:my_database', {version: 1, estimatedSize: 1048576});
+    var db = new Database('ext:my_database', {version: '1', estimatedSize: 1048576});
 
-I'll add documentation for using the class once I'm certain that
-the methods and whatnot aren't going to be changing. In the 
-meantime, there's extensive documentation in the class itself
+Currently all documentation for the class is inline in the source code.
+In particular, you should read the comments for `setSchema`, `query`,
+and `queries` as these are the main methods you will need in everyday usage.
 
 ## In the wild
 
-The Database class was developed for and is used by [TouchNote][1].
+The Database class was developed for and used by [TapNote][1].
 
-If I hear about it being used elsewhere, I'll note it here.
+Let me know if you are using it, and I will note it here.
 
-   [1]: http://onecrayon.com/touchnote/
+   [1]: http://onecrayon.com/tapnote/
 
 ## Released under an MIT license
 
