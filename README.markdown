@@ -27,9 +27,26 @@ Currently all documentation for the class is inline in the source code.
 In particular, you should read the comments for `setSchema`, `query`,
 and `queries` as these are the main methods you will need in everyday usage.
 
+## What's new in v1.2
+
+- New `changeVersion` syntax; you do not need to pass changeVersion the old
+  database version anymore (although it maintains backwards compatibility with
+  the old setup).
+- New `changeVersionWithSchema` and `changeVersionWithSchemaFromURL` methods
+  that allow you to update your database version and automatically run your
+  schema updates at the same time. Recommended usage:
+
+        var db = new Database('ext:my_database', {version: ''});
+        if (db.getVersion() !== '2') {
+            db.changeVersionWithSchemaFromURL('2', 'path/to/schema-2.json');
+        }
+
+- As with v1.1, you can use SQL strings instead of table definitions in schema
+  files in order to do things like update tables with new columns and so forth.
+
 ## In the wild
 
-The Database class was developed for and used by [TapNote][1].
+The Database class is developed for and used by [TapNote][1].
 
 Let me know if you are using it, and I will note it here.
 

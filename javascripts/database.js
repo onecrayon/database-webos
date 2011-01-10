@@ -10,7 +10,7 @@ license: MIT license <http://www.opensource.org/licenses/mit-license.php>
 authors:
 - Ian Beck
 
-version: 1.1.0
+version: 1.2.0
 
 Core class design based on the Mootools Database class by André Fiedler:
 http://github.com/SunboX/mootools-database/
@@ -97,19 +97,6 @@ var Database = Class.create({
 	 */
 	getVersion: function() {
 		return this.dbVersion;
-	},
-	
-	/**
-	 * Change the version of the database; allows porting data when
-	 * upgrading schema
-	 *
-	 * WARNING: you must have NO other database connections active when you
-	 * do this, and remember that afterward you will need to use the new
-	 * version in your `new Database()` calls.
-	 */
-	changeVersion: function(from, to) {
-		this.db.changeVersion(from, to);
-		this.dbVersion = to;
 	},
 	
 	/**
@@ -327,7 +314,6 @@ var Database = Class.create({
 	 *     "ALTER TABLE table1 ADD COLUMN category TEXT"
 	 * ]
 	 */
-	
 	setSchema: function(schema, options) {
 		// Check to see if it's a single table, make array for convenience
 		if (!Object.isArray(schema)) {
@@ -449,6 +435,86 @@ var Database = Class.create({
 	 */
 	insertDataFromURL: function(url, options) {
 		this._readURL(url, this.bound.insertData, options);
+	},
+	
+	
+	// === VERSIONING METHODS ===
+	
+	/**
+	 * Change the version of the database; allows porting data when
+	 * upgrading schema
+	 *
+	 * WARNING: you must have NO other database connections active when you
+	 * do this, and remember that afterward you will need to use the new
+	 * version in your `new Database()` calls.
+	 */
+	changeVersion: function(newVersion) {
+		// Backwards compatibility with previous incarnation which was changeVersion(from, to)
+		if (arguments.length > 1) {
+			newVersion = arguments[1];
+		}
+		this.db.changeVersion(this.dbVersion, newVersion);
+		this.dbVersion = newVersion;
+	},
+	
+	/**
+	 * Change the version of the database and apply any schema updates
+	 * specified in the `schema` object
+	 *
+	 * NOTE: You cannot insert data with this call. Instead, run your schema
+	 * update and then use insertData in your success callback
+	 *
+	 * Parameters:
+	 * - newVersion (string or int)
+	 * - schema (object or string): same as setSchema (documented above),
+	 *   minus any data insertion support
+	 * - options (object): same as setSchema options
+	 */
+	changeVersionWithSchema: function(newVersion, schema, options) {
+		// Check to see if it's a single table, make array for convenience
+		if (!Object.isArray(schema)) {
+			schema = [schema];
+		}
+		// Merge in user options (if any) to defaults
+		var options = (!Object.isUndefined(options) ? options : {});
+		options = this._getOptions(options);
+		
+		// Run the changeVersion update!
+		this.db.changeVersion(this.dbVersion, newVersion, function(transaction) {
+			// Loop over the items in the schema
+			var length = schema.length;
+			var item = null, query = null, sql = null, values = null;
+			for (var i = 0; i < length; i++) {
+				item = schema[i];
+				// Check to see if we have an SQL string or table definition
+				if (Object.isString(item)) {
+					query = item;
+				} else if (!Object.isUndefined(item.columns)) {
+					query = this.getCreateTable(item.table, item.columns);
+				}
+				
+				// Run the query
+				sql = (Object.isString(query) ? query : query.sql);
+				values = (!Object.isUndefined(query.values) ? query.values : null);
+				if (DATABASE_DEBUG) {
+					// Output the query to the log for debugging
+					Mojo.Log.info(sql, ' ==> ', values);
+				}
+				if (values !== null) {
+					transaction.executeSql(sql, values);
+				} else {
+					transaction.executeSql(sql);
+				}
+			}
+		}.bind(this), options.onError, this._versionChanged.bind(this, newVersion, options.onSuccess));
+	},
+	
+	/**
+	 * Change the version of the database and apply any schema updates
+	 * specified in the schema JSON file located at `url`
+	 */
+	changeVersionWithSchemaFromURL: function(newVersion, url, options) {
+		this._readURL(url, this.changeVersionWithSchema.bind(this, newVersion));
 	},
 	
 	
@@ -615,7 +681,6 @@ var Database = Class.create({
 	 * Returns string, since value substitution isn't supported for this
 	 * statement in SQLite
 	 */
-	
 	getCreateTable: function(tableName, columns, ifNotExists) {
 		var ifNotExists = (!Object.isUndefined(ifNotExists) ? ifNotExists : true);
 		// Setup the basic SQL
@@ -652,7 +717,19 @@ var Database = Class.create({
 		return 'DROP TABLE IF EXISTS ' + tableName;
 	},
 	
+	
 	// === Private methods ===
+	
+	/**
+	 * Sets the local tracking variable for the DB version
+	 *
+	 * PRIVATE FUNCTION; use the changeVersion* functions to modify
+	 * your database's version information
+	 */
+	_versionChanged: function(newVersion, callback) {
+		this.dbVersion = newVersion;
+		callback();
+	},
 	
 	/**
 	 * Merge user options into the standard set
