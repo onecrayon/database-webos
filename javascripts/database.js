@@ -10,7 +10,7 @@ license: MIT license <http://www.opensource.org/licenses/mit-license.php>
 authors:
 - Ian Beck
 
-version: 1.2.0
+version: 1.2.1
 
 Core class design based on the Mootools Database class by André Fiedler:
 http://github.com/SunboX/mootools-database/
@@ -453,7 +453,15 @@ var Database = Class.create({
 		if (arguments.length > 1) {
 			newVersion = arguments[1];
 		}
-		this.db.changeVersion(this.dbVersion, newVersion);
+		this.db.changeVersion(this.dbVersion, newVersion, function() {}, function() {
+			if (DATABASE_DEBUG) {
+				Mojo.Log.error("DATABASE VERSION UPDATE FAILED: " + newVersion);
+			}
+		}, function() {
+			if (DATABASE_DEBUG) {
+				Mojo.Log.info("DATABASE VERSION UPDATE SUCCESS: " + newVersion);
+			}
+		});
 		this.dbVersion = newVersion;
 	},
 	
@@ -536,25 +544,20 @@ var Database = Class.create({
 		var valueString = ' VALUES (';
 		// Set up our tracker array for value placeholders
 		var colValues = [];
-		// Uses Hash.each which results in item.key and item.value
-		data = new Hash(data);
-		// Grab the length so we know when to stop
-		var length = data.keys().length;
-		data.each(function(item, index) {
+		// Loop over the keys in our object
+		for (var key in data) {
 			// Add the value to the valueString
-			colValues.push(item.value);
+			colValues.push(data[key]);
 			// Add the placeholders
-			sql += item.key;
+			sql += key;
 			valueString += '?';
-			// Append commas if not at the end of the list
-			if (index < length - 1) {
-				sql += ', ';
-				valueString += ', ';
-			} else {
-				sql += ')';
-				valueString += ')';
-			}
-		});
+			// Append commas
+			sql += ', ';
+			valueString += ', ';
+		}
+		// Remove extra commas and insert closing parentheses
+		sql = sql.substr(0, sql.length - 2) + ')';
+		valueString = valueString.substr(0, valueString.length - 2) + ')';
 		// Put together the full SQL statement
 		sql += valueString;
 		// At long last, we've got our SQL; return it
@@ -593,13 +596,11 @@ var Database = Class.create({
 			sql += ' WHERE ';
 			var sqlValues = [];
 			var whereStrings = [];
-			// Convert to Hash for looping with item.key and item.value
-			where = new Hash(where);
-			// Loop over the where object to populate 
-			where.each(function(item) {
-				sqlValues.push(item.value);
-				whereStrings.push(item.key + ' = ?');
-			});
+			// Loop over the where object to populate
+			for (var key in where) {
+				sqlValues.push(where[key]);
+				whereStrings.push(key + ' = ?');
+			}
 			// Add the WHERE strings to the sql
 			sql += whereStrings.join(' AND ');
 		}
@@ -622,25 +623,21 @@ var Database = Class.create({
 		var sql = 'UPDATE ' + tableName + ' SET ';
 		var sqlValues = [];
 		var sqlStrings = [];
-		// Make sure we can use Hash enumerator
-		data = new Hash(data);
-		data.each(function(item) {
-			if (!Object.isUndefined(item.value)) {
-				sqlStrings.push(item.key + ' = ?');
-				sqlValues.push(item.value);
-			}
-		});
+		// Loop over data object
+		for (var key in data) {
+			sqlStrings.push(key + ' = ?');
+			sqlValues.push(data[key]);
+		}
 		// Collapse sqlStrings into SQL
 		sql += sqlStrings.join(', ');
 		// Parse the WHERE object
 		sql += ' WHERE ';
 		var whereStrings = [];
-		// Loop over the where object to populate 
-		where = new Hash(where);
-		where.each(function(item) {
-			whereStrings.push(item.key + ' = ?');
-			sqlValues.push(item.value);
-		});
+		// Loop over the where object to populate
+		for (var key in where) {
+			whereStrings.push(key + ' = ?');
+			sqlValues.push(where[key]);
+		}
 		// Add the WHERE strings to the sql
 		sql += whereStrings.join(' AND ');
 		return new DatabaseQuery(sql, sqlValues);
@@ -659,12 +656,11 @@ var Database = Class.create({
 		var sql = 'DELETE FROM ' + tableName + ' WHERE ';
 		var sqlValues = [];
 		var whereStrings = [];
-		// Loop over the where object to populate 
-		where = new Hash(where);
-		where.each(function(item) {
-			whereStrings.push(item.key + ' = ?');
-			sqlValues.push(item.value);
-		});
+		// Loop over the where object to populate
+		for (var key in where) {
+			whereStrings.push(key + ' = ?');
+			sqlValues.push(where[key]);
+		}
 		// Add the WHERE strings to the sql
 		sql += whereStrings.join(' AND ');
 		return new DatabaseQuery(sql, sqlValues);
