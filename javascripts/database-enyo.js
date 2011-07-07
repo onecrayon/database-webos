@@ -10,7 +10,7 @@ license: MIT license <http://www.opensource.org/licenses/mit-license.php>
 authors:
 - Ian Beck
 
-version: 2.0.0
+version: 2.0.1
 
 Core class design based on the Mootools Database class by André Fiedler:
 http://github.com/SunboX/mootools-database/
@@ -55,7 +55,7 @@ enyo.kind({
 	/** @protected */
 	db: undefined,
 	dbVersion: null,
-	lastInsertRowID: 0,
+	lastInsertRowId: 0,
 	
 	// === Constructor and creation logic ===
 	
@@ -110,9 +110,11 @@ enyo.kind({
 	/**
 	 * Exposes the last ID inserted
 	 */
-	lastInsertID: function() {
+	lastInsertId: function() {
 		return this.lastInsertRowId;
 	},
+	// @deprecated Provided for backwards compatibility
+	lastInsertID: this.lastInsertId,
 	
 	/**
 	 * Close the database connection
@@ -172,7 +174,7 @@ enyo.kind({
 		this.db.transaction(function(transaction) {
 			if (self.debug) {
 				// Output the query to the log for debugging
-				console.log(sql, ' ==> ', options.values);
+				self.log(sql, ' ==> ', options.values);
 			}
 			transaction.executeSql(sql, options.values, function(transaction, results) {
 				// We use this anonymous function to format the results
@@ -217,6 +219,7 @@ enyo.kind({
 		options = this._getOptions(options);
 		// Run the transaction
 		var DEBUG = this.debug;
+		var self = this;
 		this.db.transaction(function(transaction) {
 			// Loop over each query and execute it
 			var length = queries.length;
@@ -235,7 +238,7 @@ enyo.kind({
 				}
 				if (DEBUG) {
 					// Output query to the log for debugging
-					console.log(sql, " ==> ", values);
+					self.log(sql, " ==> ", values);
 				}
 				if (i === length - 1) {
 					// Last call
@@ -370,9 +373,11 @@ enyo.kind({
 	 *     - url (string, required): local or remote URL for JSON file
 	 *     - options (object): same as setSchema options (above)
 	 */
-	setSchemaFromURL: function(url, options) {
-		this._readURL(url, this.bound.setSchema, options);
+	setSchemaFromUrl: function(url, options) {
+		this._readUrl(url, this.bound.setSchema, options);
 	},
+	// @deprecated Provided for backwards compatibility
+	setSchemaFromURL: this.setSchemaFromUrl,
 	
 	/**
 	 * Inserts arbitrary data from a Javascript object
@@ -435,9 +440,11 @@ enyo.kind({
 	 * - url (string, required): local or remote URL for JSON file
 	 * - options (object): same as insertData options (above)
 	 */
-	insertDataFromURL: function(url, options) {
-		this._readURL(url, this.bound.insertData, options);
+	insertDataFromUrl: function(url, options) {
+		this._readUrl(url, this.bound.insertData, options);
 	},
+	// @deprecated Provided for backwards compatibility
+	insertDataFromURL: this.insertDataFromUrl,
 	
 	
 	// === VERSIONING METHODS ===
@@ -458,11 +465,11 @@ enyo.kind({
 		var self = this;
 		this.db.changeVersion(this.dbVersion, newVersion, function() {}, function() {
 			if (self.debug) {
-				console.log.error("DATABASE VERSION UPDATE FAILED: " + newVersion);
+				self.error("DATABASE VERSION UPDATE FAILED: " + newVersion);
 			}
 		}, function() {
 			if (self.debug) {
-				console.log("DATABASE VERSION UPDATE SUCCESS: " + newVersion);
+				self.log("DATABASE VERSION UPDATE SUCCESS: " + newVersion);
 			}
 		});
 		this.dbVersion = newVersion;
@@ -524,9 +531,11 @@ enyo.kind({
 	 * Change the version of the database and apply any schema updates
 	 * specified in the schema JSON file located at `url`
 	 */
-	changeVersionWithSchemaFromURL: function(newVersion, url, options) {
-		this._readURL(url, enyo.bind(this, this.changeVersionWithSchema, newVersion));
+	changeVersionWithSchemaFromUrl: function(newVersion, url, options) {
+		this._readUrl(url, enyo.bind(this, this.changeVersionWithSchema, newVersion));
 	},
+	// @deprecated Provided for backwards compatibility
+	changeVersionWithSchemaFromURL: this.changeVersionWithSchemaFromUrl,
 	
 	
 	// === SQL Methods ===
@@ -761,7 +770,7 @@ enyo.kind({
 	 * @protected
 	 * Used to read in external JSON files
 	 */
-	_readURL: function(url, callback, options) {
+	_readUrl: function(url, callback, options) {
 		enyo.xhrGet({
 			'url': url,
 			load: enyo.bind(this, function(responseText, response) {
