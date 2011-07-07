@@ -1,18 +1,42 @@
 The Database class provides methods for working with HTML 5 SQLite
-databases in Palm's WebOS.  It relies on Prototype.js and the
-Mojo framework to function, although porting it for general-purpose
-use in browsers would be fairly trivial.
-
-All portions are now tested. Still, use with caution, and if you
-find and/or fix a bug, please let me know! There may still be
-problems with edge case scenarios or portions of the script that I use
-infrequently.
+databases in Palm's WebOS. It offers versions for both Enyo and
+Mojo (Enyo version is a Component, Mojo version a Prototype class).
 
 ## Installation
 
-To use the class, download the database.js file and put it somewhere
-in your app (I usually use a top-level javascripts folder for this
-kind of generic script).
+To use the class, download either database-mojo.js or database-enyo.js
+and put it somewhere in your app (I usually use a top-level javascripts
+folder for this kind of generic script).
+
+### Enyo (WebOS 3.0+)
+
+Add a reference to the file in your appropriate depends.js file:
+
+    enyo.depends(
+        "javascripts/database-enyo.js"
+    );
+
+And then in your kind add the onecrayon.Database kind to your components:
+
+    components: [
+        {
+            name: "db",
+            kind: "onecrayon.Database",
+            database: 'ext:MyDatabase',
+            version: "",
+            debug: false
+        }
+    ]
+
+After your `create` method has been called, you will then be able to access
+the database methods using `this.$.db` (in this case; may be different if you
+named it differently). So for instance:
+
+    this.$.db.setSchemaFromURL('schemas/schema.json', {
+        onSuccess: enyo.bind(this, this.finishFirstRun)
+    });
+
+### Mojo (WebOS 1.x-2.x)
 
 Add the following line to your `sources.json` file:
 
@@ -23,26 +47,15 @@ should be able to instantiate the class like so:
 
     var db = new Database('ext:my_database', {version: '1', estimatedSize: 1048576});
 
+## Documentation
+
 Currently all documentation for the class is inline in the source code.
 In particular, you should read the comments for `setSchema`, `query`,
 and `queries` as these are the main methods you will need in everyday usage.
 
-## What's new in v1.2
+## What's new in v2.0
 
-- New `changeVersion` syntax; you do not need to pass changeVersion the old
-  database version anymore (although it maintains backwards compatibility with
-  the old setup).
-- New `changeVersionWithSchema` and `changeVersionWithSchemaFromURL` methods
-  that allow you to update your database version and automatically run your
-  schema updates at the same time. Recommended usage:
-
-        var db = new Database('ext:my_database', {version: ''});
-        if (db.getVersion() !== '2') {
-            db.changeVersionWithSchemaFromURL('2', 'path/to/schema-2.json');
-        }
-
-- As with v1.1, you can use SQL strings instead of table definitions in schema
-  files in order to do things like update tables with new columns and so forth.
+- Rewritten from the ground up for Enyo
 
 ## In the wild
 
