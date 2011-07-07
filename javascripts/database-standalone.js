@@ -343,8 +343,8 @@ Database.prototype.setSchema = function(schema, options) {
  *     - url (string, required): local or remote URL for JSON file
  *     - options (object): same as setSchema options (above)
  */
-Database.prototype.setSchemaFromURL = function(url, options) {
-	this._readURL(url, this.bound.setSchema, options);
+Database.prototype.setSchemaFromUrl = function(url, options) {
+	this._readUrl(url, this.bound.setSchema, options);
 }
 
 /**
@@ -408,8 +408,8 @@ Database.prototype.insertData = function(data, options) {
  * - url (string, required): local or remote URL for JSON file
  * - options (object): same as insertData options (above)
  */
-Database.prototype.insertDataFromURL = function(url, options) {
-	this._readURL(url, this.bound.insertData, options);
+Database.prototype.insertDataFromUrl = function(url, options) {
+	this._readUrl(url, this.bound.insertData, options);
 }
 
 
@@ -497,8 +497,8 @@ Database.prototype.changeVersionWithSchema = function(newVersion, schema, option
  * Change the version of the database and apply any schema updates
  * specified in the schema JSON file located at `url`
  */
-Database.prototype.changeVersionWithSchemaFromURL = function(newVersion, url, options) {
-	this._readURL(url, this._bind(this, this.changeVersionWithSchema, newVersion));
+Database.prototype.changeVersionWithSchemaFromUrl = function(newVersion, url, options) {
+	this._readUrl(url, this._bind(this, this.changeVersionWithSchema, newVersion));
 }
 
 
@@ -734,7 +734,7 @@ Database.prototype._emptyFunction = function() {}
  * @protected
  * Used to read in external JSON files
  */
-Database.prototype._readURL = function(url, callback, options) {
+Database.prototype._readUrl = function(url, callback, options) {
 	// Send our request
 	// We cannot use a Prototype request, because Prototype injects a bunch of useless crap that fucks up Dropbox's OAuth parsing
 	var transport = new XMLHttpRequest();
