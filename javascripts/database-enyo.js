@@ -10,7 +10,7 @@ license: MIT license <http://www.opensource.org/licenses/mit-license.php>
 authors:
 - Ian Beck
 
-version: 2.0.1
+version: 2.0.2
 
 Core class design based on the Mootools Database class by André Fiedler:
 http://github.com/SunboX/mootools-database/
@@ -71,6 +71,12 @@ enyo.kind({
 			insertData: enyo.bind(this, this.insertData),
 			_errorHandler: enyo.bind(this, this._errorHandler)
 		};
+		
+		// @deprecated methods and properties; provided for backwards compatibility
+		this.lastInsertID = this.lastInsertId;
+		this.setSchemaFromURL = this.setSchemaFromUrl;
+		this.insertDataFromURL = this.insertDataFromUrl;
+		this.changeVersionWithSchemaFromURL = this.changeVersionWithSchemaFromUrl;
 	},
 	
 	/** @protected */
@@ -113,8 +119,6 @@ enyo.kind({
 	lastInsertId: function() {
 		return this.lastInsertRowId;
 	},
-	// @deprecated Provided for backwards compatibility
-	lastInsertID: this.lastInsertId,
 	
 	/**
 	 * Close the database connection
@@ -376,8 +380,6 @@ enyo.kind({
 	setSchemaFromUrl: function(url, options) {
 		this._readUrl(url, this.bound.setSchema, options);
 	},
-	// @deprecated Provided for backwards compatibility
-	setSchemaFromURL: this.setSchemaFromUrl,
 	
 	/**
 	 * Inserts arbitrary data from a Javascript object
@@ -443,8 +445,6 @@ enyo.kind({
 	insertDataFromUrl: function(url, options) {
 		this._readUrl(url, this.bound.insertData, options);
 	},
-	// @deprecated Provided for backwards compatibility
-	insertDataFromURL: this.insertDataFromUrl,
 	
 	
 	// === VERSIONING METHODS ===
@@ -534,8 +534,6 @@ enyo.kind({
 	changeVersionWithSchemaFromUrl: function(newVersion, url, options) {
 		this._readUrl(url, enyo.bind(this, this.changeVersionWithSchema, newVersion));
 	},
-	// @deprecated Provided for backwards compatibility
-	changeVersionWithSchemaFromURL: this.changeVersionWithSchemaFromUrl,
 	
 	
 	// === SQL Methods ===
