@@ -9,8 +9,9 @@ license: MIT license <http://www.opensource.org/licenses/mit-license.php>
 
 authors:
 - Ian Beck
+- Scott J. Miles
 
-version: 2.0.2
+version: 2.1.0
 
 Core class design based on the Mootools Database class by André Fiedler:
 http://github.com/SunboX/mootools-database/
@@ -169,7 +170,7 @@ enyo.kind({
 		// Run the actual merge for our options, making sure there's a default values array
 		options = this._getOptions(options, {"values": []});
 		// Trim whitespace to make sure we can accurately check character positions
-		sql = enyo.string.trim(sql);
+		sql = sql.replace(/^\s+|\s+$/g, "");
 		if (sql.lastIndexOf(';') !== sql.length - 1) {
 			sql = sql + ';';
 		}
@@ -769,22 +770,32 @@ enyo.kind({
 	 * Used to read in external JSON files
 	 */
 	_readUrl: function(url, callback, options) {
-		enyo.xhrGet({
-			'url': url,
-			load: enyo.bind(this, function(responseText, response) {
-				// I have no idea why status can be zero when reading file locally, but it can
-				if (response.status === 200 || response.status === 0) {
-					try {
-						var json = enyo.json.parse(responseText);
-						callback(json, options);
-					} catch (e) {
-						this.error('JSON request error:', e);
-					}
-				} else {
-					this.error('Database: failed to read JSON at URL `' + url + '`');
+		var callbackBound = enyo.bind(this, function(responseText, response) {
+			// I have no idea why status can be zero when reading file locally, but it can
+			if (response.status === 200 || response.status === 0) {
+				try {
+					var json = enyo.json.parse(responseText);
+					callback(json, options);
+				} catch (e) {
+					this.error('JSON request error:', e);
 				}
-			})
+			} else {
+				this.error('Database: failed to read JSON at URL `' + url + '`');
+			}
 		});
+		if (typeof enyo.xhrGet !== 'undefined') {
+			// We're working with Enyo 1
+			enyo.xhrGet({
+				'url': url,
+				load: callbackBound
+			});
+		} else {
+			// Working with Enyo 2, so use its xhr object instead
+			enyo.xhr.request({
+				'url': url,
+				callback: callbackBound
+			});
+		}
 	},
 	
 	/**

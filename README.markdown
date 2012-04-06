@@ -8,7 +8,7 @@ To use the class, download either database-mojo.js or database-enyo.js
 and put it somewhere in your app (I usually use a top-level javascripts
 folder for this kind of generic script).
 
-### Enyo (WebOS 3.0+)
+### Enyo (webOS 3.0+, Enyo 2-compatible)
 
 Add a reference to the file in your appropriate depends.js file:
 
@@ -36,7 +36,7 @@ named it differently). So for instance:
         onSuccess: enyo.bind(this, this.finishFirstRun)
     });
 
-### Mojo (WebOS 1.x-2.x)
+### Mojo (webOS 1.x-2.x)
 
 Add the following line to your `sources.json` file:
 
@@ -53,7 +53,13 @@ Currently all documentation for the class is inline in the source code.
 In particular, you should read the comments for `setSchema`, `query`,
 and `queries` as these are the main methods you will need in everyday usage.
 
-## What's new in v2.0
+## Changelog
+
+**2.1**
+
+- Now supports Enyo 2.0; thanks Scott Miles!
+
+**2.0**
 
 - Rewritten from the ground up for Enyo
 
@@ -67,7 +73,7 @@ Let me know if you are using it, and I will note it here.
 
 ## Released under an MIT license
 
-Copyright (c) 2010 Ian Beck
+Copyright (c) 2010-2012 Ian Beck
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
