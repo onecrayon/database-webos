@@ -1,6 +1,8 @@
 The Database class provides methods for working with HTML 5 SQLite
 databases in Palm's WebOS. It offers versions for both Enyo and
 Mojo (Enyo version is a Component, Mojo version a Prototype class).
+You can find full reference documentation within the inline comments
+or at http://onecrayon.github.com/database-webos
 
 ## Installation
 
