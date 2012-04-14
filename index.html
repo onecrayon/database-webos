@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Database class : A Javascript class to ease working with HTML5 SQLite databases in webOS, the Enyo framework, and beyond" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Database class</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/onecrayon/database-webos">Fork Me on GitHub</a>
+
+          <h1 id="project_title">Database class</h1>
+          <h2 id="project_tagline">A Javascript class to ease working with HTML5 SQLite databases in webOS, the Enyo framework, and beyond</h2>
+
+          <section id="downloads">
+            <a class="zip_download_link" href="https://github.com/onecrayon/database-webos/zipball/master">Download this project as a .zip file</a>
+            <a class="tar_download_link" href="https://github.com/onecrayon/database-webos/tarball/master">Download this project as a tar.gz file</a>
+          </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>Database class</h1>
+
+<p>Welcome! To help clear up some of the confusion newcomers have when starting to use the Database class, I decided to provide this documentation. <a href="#reference">Skip straight to the reference material</a>.</p>
+
+<p><strong>Please note:</strong> all examples in this documentation are using the Enyo database class (because that is far and away the most popular). All other info should applie to the other versions, as well. You just might need to write slightly different code for constructing the Database object, for instance.</p>
+
+<h2>Introduction</h2>
+
+<p>The Database class is simply a wrapper around the native WebSQL API. When I first started working with WebSQL for <a href="http://onecrayon.com/tapnote/">TapNote</a>, I found the API to be entirely too complicated for my tastes. At the time I was working quite heavily in Prototype (which was part of the Mojo framework on the original webOS smartphones), so the class uses a number of Prototype-like methods. Here are some basic things you should know:</p>
+
+<p><strong>Almost everything is asynchronous.</strong> A common mistake beginning users make is to do something like call the <code>query()</code> method to insert data, and then immediately try to work with the database again. This will not work, because all calls to the database are asynchronous. Instead, you will always need to pass a function to the <code>onSuccess</code> option, and then do any follow-up parsing there.</p>
+
+<p><strong>Why you should use it:</strong> this class abstracts away from the WebSQL boilerplate, making your own code slightly less complex and a lot nicer to read. Most people will end up writing a generic query method when they work with WebSQL anyway; Database just does it for you. It also provides helper methods for generating things like simple SELECT/INSERT/UPDATE queries. Additionally, populating your database initially is much easier because the class provides methods for doing so via JSON (no need to write a bunch of INSERTS). Lastly, the class is particularly applicable to use on webOS because it will run on everything from Mojo 1.4 up to Enyo 2. And if for whatever reason you want to use it on a non-webOS based project, there's a version that should work on its own in any environment that supports Javascript and the WebSQL API.</p>
+
+<p><strong>Why you should avoid it:</strong> the Database class makes total sense to me, because I wrote it. You, however, are going to have learn a new (albeit simple) API. If you are not familiar with the WebSQL methods, what is going on behind the scenes may seem like Black Magic, which could make debugging your code difficult if anything goes wrong.</p>
+
+<p><strong>WebSQL has serious downsides.</strong> Most environments limit WebSQL databases to 5 MB, so simply because it is SQL does not mean you can store vast amounts of data. Additionally, every implementation that I know of uses SQLite as its database engine, which has its own set of quirks. If you are doing anything remotely more complicated than simple SELECTS, be aware that you will likely need to visit the SQLite documentation if something weird starts happening. You should probably do so anyway, because SQLite does some special magic when it comes to tracking auto-incrementing row IDs and so forth that is not normal for most SQL implementations you are probably used to.</p>
+
+<h2>Basic usage</h2>
+
+<p>There are two steps you need to take before you can start running queries:</p>
+
+<ol>
+<li>You must include the database-enyo.js file using <code>enyo.depends</code>
+</li>
+<li>You must initialize your database</li>
+</ol><p>You can only have a single connection to your database open; I typically make it a component of my root app Kind or model, and then route all database activity through that.</p>
+
+<p>To include the database Kind in your project, add it to your root <code>depends.js</code> file:</p>
+
+<div class="highlight">
+<pre><span class="nx">enyo</span><span class="p">.</span><span class="nx">depends</span><span class="p">(</span>
+    <span class="s2">"source/database-enyo.js"</span><span class="p">,</span>
+    <span class="c1">// Include other app Kinds here</span>
+<span class="p">);</span>
+</pre>
+</div>
+
+
+<p>To initialize it, add it as a component in your Kind and initialize it. Here is how I do so in the TapNote model Kind:</p>
+
+<div class="highlight">
+<pre><span class="nx">enyo</span><span class="p">.</span><span class="nx">kind</span><span class="p">({</span>
+    <span class="nx">name</span><span class="o">:</span> <span class="s1">'TapNote.DocumentsModel'</span><span class="p">,</span>
+    <span class="nx">kind</span><span class="o">:</span> <span class="nx">enyo</span><span class="p">.</span><span class="nx">Component</span><span class="p">,</span>
+    <span class="nx">components</span><span class="o">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nx">name</span><span class="o">:</span> <span class="s2">"db"</span><span class="p">,</span>
+            <span class="nx">kind</span><span class="o">:</span> <span class="s2">"onecrayon.Database"</span><span class="p">,</span>
+            <span class="nx">database</span><span class="o">:</span> <span class="s1">'ext:com.onecrayon.tapnote'</span><span class="p">),</span>
+            <span class="nx">version</span><span class="o">:</span> <span class="s2">""</span><span class="p">,</span>
+            <span class="nx">debug</span><span class="o">:</span> <span class="p">(</span><span class="nx">enyo</span><span class="p">.</span><span class="nx">exists</span><span class="p">(</span><span class="nx">enyo</span><span class="p">.</span><span class="nx">fetchFrameworkConfig</span><span class="p">().</span><span class="nx">debuggingEnabled</span><span class="p">)</span> <span class="o">?</span> <span class="nx">enyo</span><span class="p">.</span><span class="nx">fetchFrameworkConfig</span><span class="p">().</span><span class="nx">debuggingEnabled</span> <span class="o">:</span> <span class="kc">false</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+
+    <span class="nx">constructor</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">inherited</span><span class="p">(</span><span class="nx">arguments</span><span class="p">);</span>
+
+        <span class="c1">// Ensures we don't try to load items multiple times while in asynchronous communication w/ database</span>
+        <span class="c1">// Is also set to true while loading table schema and intro data</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">runningQuery</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+
+        <span class="c1">// This is a common pattern for me; I do all my multi-use bindings in the constructor</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">bound</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="nx">finishFirstRun</span><span class="o">:</span> <span class="nx">enyo</span><span class="p">.</span><span class="nx">bind</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">finishFirstRun</span><span class="p">)</span>
+        <span class="p">};</span>
+    <span class="p">},</span>
+
+    <span class="nx">create</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="c1">// Components are not available until after this.inherited in create</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">inherited</span><span class="p">(</span><span class="nx">arguments</span><span class="p">);</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">localStorage</span><span class="p">[</span><span class="s2">"TapNote.firstRun"</span><span class="p">]</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">runningQuery</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">populateDatabase</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+
+    <span class="c1">// These methods are custom ones of my own, not standard Enyo overrides</span>
+
+    <span class="nx">populateDatabase</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">runningQuery</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+        <span class="c1">// Run the table creation schema and populate our items list</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">$</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nx">setSchemaFromURL</span><span class="p">(</span><span class="s1">'path/to/schema.json'</span><span class="p">,</span> <span class="p">{</span>
+            <span class="nx">onSuccess</span><span class="o">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">bound</span><span class="p">.</span><span class="nx">finishFirstRun</span>
+        <span class="p">});</span>
+    <span class="p">},</span>
+
+    <span class="c1">// This finishes the first run insert and calls the insert method</span>
+    <span class="nx">finishFirstRun</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nx">localStorage</span><span class="p">[</span><span class="s2">"TapNote.firstRun"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"true"</span><span class="p">;</span>
+        <span class="c1">// Set the database version (allows for schema upgrades down the road)</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">$</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nx">changeVersion</span><span class="p">(</span><span class="s1">'1.0'</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">runningQuery</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+        <span class="c1">// I proceed to refresh my document listings here</span>
+    <span class="p">},</span>
+
+    <span class="c1">// Lots of other methods follow, but you get the idea</span>
+<span class="p">});</span>
+</pre>
+</div>
+
+
+<p>Note that you don't need to copy and paste that code. All you have to make sure you do is add your database as a component, then load in a table schema before you start trying to use it. If you are not inserting data when you first create the database, you can load a table schema every time (because it will automatically use <code>CREATE TABLE IF NOT EXISTS</code>). However, this can slow down your launch times, so using cookies, localStorage, or some other method to track if the database has been populated is generally a good idea.</p>
+
+<p>The schema.json file for TapNote looks something like this:</p>
+
+<div class="highlight">
+<pre><span class="p">[</span>
+    <span class="p">{</span>
+        <span class="nt">"table"</span><span class="p">:</span> <span class="s2">"documents"</span><span class="p">,</span>
+        <span class="nt">"columns"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span> <span class="nt">"column"</span><span class="p">:</span> <span class="s2">"rowID"</span><span class="p">,</span> <span class="nt">"type"</span><span class="p">:</span> <span class="s2">"INTEGER"</span><span class="p">,</span> <span class="nt">"constraints"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"PRIMARY KEY"</span><span class="p">]</span> <span class="p">},</span>
+            <span class="p">{</span> <span class="nt">"column"</span><span class="p">:</span> <span class="s2">"title"</span><span class="p">,</span> <span class="nt">"type"</span><span class="p">:</span> <span class="s2">"TEXT"</span> <span class="p">},</span>
+            <span class="p">{</span> <span class="nt">"column"</span><span class="p">:</span> <span class="s2">"content"</span><span class="p">,</span> <span class="nt">"type"</span><span class="p">:</span> <span class="s2">"TEXT"</span> <span class="p">},</span>
+            <span class="p">{</span> <span class="nt">"column"</span><span class="p">:</span> <span class="s2">"description"</span><span class="p">,</span> <span class="nt">"type"</span><span class="p">:</span> <span class="s2">"TEXT"</span> <span class="p">}</span>
+        <span class="p">],</span>
+        <span class="nt">"data"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="nt">"title"</span><span class="p">:</span> <span class="s2">"Welcome to TapNote"</span><span class="p">,</span>
+                <span class="nt">"description"</span><span class="p">:</span> <span class="s2">"Tap this document to view it, or swipe to delete."</span><span class="p">,</span>
+                <span class="nt">"content"</span><span class="p">:</span> <span class="s2">"Using TapNote should be familiar if you have used other WebOS apps, but here are a few tips:\n\n[...]"</span>
+            <span class="p">}</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+</pre>
+</div>
+
+
+<p>The <code>data</code> key is optional, and if present it will be used to insert data after you create the table. You could optionally place your initial inserts in their own JSON file and run it in your <code>onSuccess</code> function after the schema creation.</p>
+
+<p>After the database component is added and the table schema initialized, the database class is ready to be used! For instance, if I wanted to fetch a listing of all my documents in TapNote, I might do this in the model class:</p>
+
+<div class="highlight">
+<pre><span class="nx">listAllDocuments</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">sql</span> <span class="o">=</span> <span class="s1">'SELECT title, description FROM documents'</span><span class="p">;</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">$</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nx">query</span><span class="p">(</span><span class="nx">sql</span><span class="p">,</span> <span class="p">{</span> <span class="s2">"onSuccess"</span><span class="o">:</span> <span class="nx">callback</span> <span class="p">});</span>
+<span class="p">}</span>
+</pre>
+</div>
+
+
+<p>Whatever I pass as the callback to my model will receive an array of objects, each of which will have a <code>title</code> and <code>description</code> property. As you would expect, if nothing matches the query, callback will receive an empty array.</p>
+
+<p>If you want to select based on potentially unsafe input, use an object instead of a string for your query:</p>
+
+<div class="highlight">
+<pre><span class="nx">searchTitles</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">searchString</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Sanitize the search string for backslash escapes and wildcards</span>
+    <span class="nx">searchString</span> <span class="o">=</span> <span class="nx">searchString</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/\\/g</span><span class="p">,</span> <span class="s1">'\\\\'</span><span class="p">).</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/(%|_)/g</span><span class="p">,</span> <span class="s1">'\\$1'</span><span class="p">);</span>
+    <span class="c1">// Add wildcards around the searchString</span>
+    <span class="nx">searchString</span> <span class="o">=</span> <span class="s1">'%'</span> <span class="o">+</span> <span class="nx">searchString</span> <span class="o">+</span> <span class="s1">'%'</span><span class="p">;</span>
+    <span class="c1">// Construct our query object</span>
+    <span class="kd">var</span> <span class="nx">query</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"sql"</span><span class="o">:</span> <span class="s2">"SELECT title, description FROM documents WHERE title LIKE ? ESCAPE '\\'"</span><span class="p">,</span>
+        <span class="s2">"values"</span><span class="o">:</span> <span class="p">[</span> <span class="nx">searchString</span> <span class="p">]</span>
+    <span class="p">};</span>
+    <span class="c1">// Run the query</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">$</span><span class="p">.</span><span class="nx">db</span><span class="p">.</span><span class="nx">query</span><span class="p">(</span><span class="nx">query</span><span class="p">,</span> <span class="p">{</span> <span class="s2">"onSuccess"</span><span class="o">:</span> <span class="nx">callback</span> <span class="p">});</span>
+<span class="p">}</span>
+</pre>
+</div>
+
+
+<p>This pattern uses a feature native to SQLite. For every <code>?</code> character in the SQL, SQLite will automatically insert the values from the <code>values</code> array in order after sanitizing them against SQL attacks. For both the <code>query()</code> and <code>queries()</code> methods, you can pass either an object with an <code>sql</code> and <code>values</code> property, or a string.</p>
+
+<p>You should at this point have a pretty good grasp on the basics of using the Database class, so go forth and make awesome software! You can find a full reference for its properties and methods below.</p>
+
+<h2>JSON Formatting</h2>
+
+<p>Several Database methods accept JSON (either in files or as a string), since a core goal of the Database class is to enable you to easily port data into your database using JSON.</p>
+
+<p>All JSON uses the same naming scheme. Your root object should be an array, although if you only have one object you want to work with you can make it your root instead.</p>
+
+<p>Instead of objects defining a table, you can also pass in arbitrary strings of SQL. This is primarily useful if you are upgrading your schema and need to ALTER TABLE or similar.</p>
+
+<div class="highlight">
+<pre><span class="p">[</span>
+    <span class="p">{</span>
+        <span class="nt">"table"</span><span class="p">:</span> <span class="s2">"(string, required) name of this table"</span><span class="p">,</span>
+        <span class="nt">"columns"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="nt">"column"</span><span class="p">:</span> <span class="s2">"(string, required) name of the column"</span><span class="p">,</span>
+                <span class="nt">"type"</span><span class="p">:</span> <span class="s2">"(string, required) column type"</span><span class="p">,</span>
+                <span class="nt">"constraints"</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">"array of optional string restraints"</span>
+                <span class="p">]</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="nt">"column"</span><span class="p">:</span> <span class="s2">"anotherColumn"</span><span class="p">,</span>
+                <span class="nt">"type"</span><span class="p">:</span> <span class="s2">"TEXT"</span>
+            <span class="p">}</span>
+        <span class="p">],</span>
+        <span class="nt">"data"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span> <span class="nt">"anotherColumn"</span><span class="p">:</span> <span class="s2">"keys are column names; values column contents"</span> <span class="p">},</span>
+            <span class="p">{</span> <span class="nt">"anotherColumn"</span><span class="p">:</span> <span class="s2">"more example data"</span> <span class="p">}</span>
+        <span class="p">]</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+        <span class="nt">"table"</span><span class="p">:</span> <span class="s2">"secondTable"</span><span class="p">,</span>
+        <span class="nt">"columns"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="nt">"column"</span><span class="p">:</span> <span class="s2">"helloWorld"</span><span class="p">,</span>
+                <span class="nt">"type"</span><span class="p">:</span> <span class="s2">"TEXT"</span>
+            <span class="p">}</span>
+        <span class="p">]</span>
+    <span class="p">},</span>
+    <span class="s2">"ALTER TABLE table1 ADD COLUMN category TEXT"</span>
+<span class="p">]</span>
+</pre>
+</div>
+
+
+<p>Both <code>columns</code> and <code>data</code> are optional; you can use this scheme to define tables, populate them with data, or both (depending on the method you are calling).</p>
+
+<h2>Reference</h2>
+
+<p>There are no public properties on the database object; everything you need to access is available via a method.</p>
+
+<h3>Query objects</h3>
+
+<p>Query objects are generic objects that have the following properties:</p>
+
+<ul>
+<li>
+<strong>sql</strong> (string): the SQL you want to execute</li>
+<li>
+<strong>values</strong> (array): values for <code>?</code> placeholders in the SQL</li>
+</ul><p><strong>Usage:</strong></p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">query</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"sql"</span><span class="o">:</span> <span class="s2">"SELECT * FROM table WHERE rowID = ?"</span><span class="p">,</span>
+    <span class="s2">"values"</span><span class="o">:</span> <span class="p">[</span> <span class="mi">1</span> <span class="p">]</span>
+<span class="p">};</span>
+</pre>
+</div>
+
+
+<h3>Constructor</h3>
+
+<p>Construct a single, shared Database object by assigning it to your components in your model or root application Kind. It accepts four keyword options:</p>
+
+<ul>
+<li>
+<strong>database</strong> (string, required): the name of your database</li>
+<li>
+<strong>version</strong> (string, optional): the version of your database. Typically a numeric string like <code>"1"</code> or <code>"1.0"</code>, but there are no actual rules for what you should put here</li>
+<li>
+<strong>estimatedSize</strong> (int, optional): the estimated size in bytes of your database</li>
+<li>
+<strong>debug</strong> (bool, optional): if <code>true</code> the database will log every query it runs for help with debugging</li>
+</ul><p><strong>Usage:</strong></p>
+
+<div class="highlight">
+<pre><span class="nx">components</span><span class="o">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="nx">name</span><span class="o">:</span> <span class="s2">"db"</span><span class="p">,</span>
+        <span class="nx">kind</span><span class="o">:</span> <span class="s2">"onecrayon.Database"</span><span class="p">,</span>
+        <span class="nx">database</span><span class="o">:</span> <span class="s1">'ext:MyDatabase'</span><span class="p">,</span>
+        <span class="nx">version</span><span class="o">:</span> <span class="s2">""</span><span class="p">,</span>
+        <span class="nx">debug</span><span class="o">:</span> <span class="kc">false</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+</pre>
+</div>
+
+
+<h3>getVersion()</h3>
+
+<p><em>Returns string</em>; the version of the database.</p>
+
+<h3>lastInsertId()</h3>
+
+<p><em>Returns int</em>; the last ID inserted. This only works if you have just completed a single INSERT statement.</p>
+
+<h3>close()</h3>
+
+<p><em>Returns nothing</em>; closes the database connection. Why you'd want to do this, I don't know. Included for completeness' sake.</p>
+
+<h3>query(sql, options)</h3>
+
+<p><em>Returns nothing</em>; execute an arbitrary SQL command on the database.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>sql</strong> (string or query object, required): the query to execute</li>
+<li>
+<strong>options</strong> (object, optional):
+
+<ul>
+<li>
+<strong>values</strong> (array, optional): replacements for '?' placeholders in SQL (only use if not passing a query object)</li>
+<li>
+<strong>onSuccess</strong> (function, recommended): function to call on successful query. The function receives a single argument, which is an array of objects.</li>
+<li>
+<strong>onError</strong> (function, optional): method to call on error; defaults to logging</li>
+</ul>
+</li>
+</ul><h3>queries(queries, options)</h3>
+
+<p><em>Returns nothing</em>; execute multiple arbitrary SQL queries on the database as a single transaction (group of inserts, for instance). This is <em>not appropriate for SELECT</em> (or anything that returns rows). The last inserted ID will <em>not</em> be set when using this method. The <code>onSuccess</code> and <code>onError</code> functions will only be called for the transaction as a whole, not individual queries.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>queries</strong> (array of strings or query objects, required): the SQL queries you want to execute</li>
+<li>
+<strong>options</strong> (object, optional):
+
+<ul>
+<li>
+<code>onSuccess</code>: function to execute on final query success</li>
+<li>
+<code>onError</code>: function to execute on transaction error</li>
+</ul>
+</li>
+</ul><h3>setSchema(schema, options)</h3>
+
+<p><em>Returns nothing</em>; defines/inserts a table layout (if it doesn't already exist) and inserts any data that you've provided.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>schema</strong> (array or object, required): conforms to the JSON scheme outlined above, and defines one or more tables to create in your database. <strong>Does not accept JSON strings!</strong> To setup your schema using JSON instead of native Javascript objects, use <code>setSchemaFromUrl()</code>.</li>
+<li>
+<strong>options</strong> (object, optional):
+
+<ul>
+<li>
+<strong>onSuccess</strong> (function): called after successful transactions</li>
+<li>
+<strong>onError</strong> (function): called on error for transactions</li>
+</ul>
+</li>
+</ul><p>PLEASE NOTE: the onSuccess and onError functions may be called multiple times if you are inserting data as well as defining a table schema.</p>
+
+<h3>setSchemaFromUrl(url, options)</h3>
+
+<p><em>Returns nothing</em>; allows you to set your schema using an arbitrary JSON file.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>url</strong> (string, required): local or remote URL for JSON file</li>
+<li>
+<strong>options</strong> (object): same as setSchema options (above)</li>
+</ul><h3>insertData(data, options)</h3>
+
+<p><em>Returns nothing</em>; inserts arbitrary data using Javascript objects.</p>
+
+<p><strong>Parameters</strong></p>
+
+<ul>
+<li>
+<strong>data</strong> (array or object, required): the formatting is the same as for the schema, just without the <code>columns</code> property.</li>
+<li>
+<strong>options</strong> (object):
+
+<ul>
+<li>
+<strong>onSuccess</strong> (function): success callback</li>
+<li>
+<strong>onError</strong> (function): error callback</li>
+</ul>
+</li>
+</ul><h3>insertDataFromUrl(url, options)</h3>
+
+<p><em>Returns nothing</em>; allows you to populate data using arbitrary JSON file.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>url</strong> (string, required): local or remote URL for JSON file</li>
+<li>
+<strong>options</strong> (object): same as insertData options (above)</li>
+</ul><h3>changeVersion(newVersion)</h3>
+
+<p><em>Returns nothing</em>; change the version of the database.</p>
+
+<p><strong>WARNING:</strong> you must have NO other database connections active when you do this.</p>
+
+<h3>changeVersionWithSchema(newVersion, schema, options)</h3>
+
+<p><em>Returns nothing</em>; change the version of the database and apply any schema updates specified in the <code>schema</code> object. <strong>NOTE:</strong> You cannot insert data with this call. Instead, run your schema update and then use <code>insertData()</code> in your success callback.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>newVersion</strong> (string or int, required)</li>
+<li>
+<strong>schema</strong> (array or object): same as setSchema (documented above), minus any data insertion support</li>
+<li>
+<strong>options</strong> (object): same as setSchema options</li>
+</ul><h3>changeVersionWithSchemaFromUrl(newVersion, url, options)</h3>
+
+<p><em>Returns nothing</em>; change the version of the database and apply any schema updates specified in the schema JSON file located at <code>url</code>.</p>
+
+<p>Parameters are otherwise identical to <code>changeVerisonWithSchema()</code>.</p>
+
+<h3>getInsert(tableName, data)</h3>
+
+<p><em>Returns query object</em>; helper method to generate SQL for inserting data into a particular table.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>tableName</strong> (string, required)</li>
+<li>
+<strong>data</strong> (object, required): keys are column names (same format as data objects in schema)</li>
+</ul><h3>getSelect(tableName, columns, where)</h3>
+
+<p><em>Returns query object</em>; helper method for generating very simple SQL for selecting data.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>tableName</strong> (string, required)</li>
+<li>
+<strong>columns</strong> (string, array, or null): names of the columns to return; if <code>null</code> will return all columns</li>
+<li>
+<strong>where</strong> (object): every key/value pair will create a WHERE clause, joined with AND. So for instance, <code>{ "title": "Hello", "content": "World" }</code> will result in <code>WHERE title = 'Hello' AND content = 'World'</code>
+</li>
+</ul><h3>getUpdate(tableName, data, where)</h3>
+
+<p><em>Returns query object</em>; helper method for generating simple SQL for updating a table record.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>tableName</strong> (string, required)</li>
+<li>
+<strong>data</strong> (object, required): keys are column names (same format as data objects in schema)</li>
+<li>
+<strong>where</strong> (object, optional): same formatting as <code>getSelect()</code> above</li>
+</ul><h3>getDelete(tableName, where)</h3>
+
+<p><em>Returns query object</em>; helper method for generating simple SQL for deleting a table record.</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>tableName</strong> (string, required)</li>
+<li>
+<strong>where</strong> (object, required): same formatting as <code>getSelect()</code> above</li>
+</ul><h3>getCreateTable(tableName, columns, ifNotExists)</h3>
+
+<p><em>Returns string</em>; helper method to generate simple SQL for creating a table. Returns a string because table creation does not support value substitution. <strong>Note:</strong> this method is vulnerable to SQL injections! <em>Do not</em> use user-supplied values!</p>
+
+<p><strong>Parameters:</strong></p>
+
+<ul>
+<li>
+<strong>tableName</strong> (string, required)</li>
+<li>
+<strong>columns</strong> (array, required): uses syntax from setSchema (see above)</li>
+<li>
+<strong>ifNotExists</strong> (bool, defaults to true): if <code>true</code>, then the table will only be created if it does not already exist</li>
+</ul><h3>getDropTable(tableName)</h3>
+
+<p><em>Returns string</em>; helper method to generate SQL for dropping a table. <strong>Note:</strong> this method is vulnerable to SQL injections! <em>Do not</em> use user-supplied values for the tableName!</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Database class maintained by <a href="https://github.com/onecrayon">onecrayon</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
